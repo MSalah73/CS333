@@ -69,7 +69,9 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
-
+#ifdef CS333_P1
+  p->start_ticks = ticks;
+#endif
   return p;
 }
 
@@ -502,11 +504,17 @@ static char *states[] = {
 void
 procdump(void)
 {
+#ifdef CS333_P1
+  int i, sec, milisec;
+#else
   int i;
+#endif
   struct proc *p;
   char *state;
   uint pc[10];
-  
+#ifdef CS333_P1
+  cprintf("PID\tState\tName\tElapsed\t PCs\n");
+#endif
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -514,7 +522,13 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
+#ifdef CS333_P1
+    sec = (ticks - p->start_ticks)/1000;
+    milisec = (ticks - p->start_ticks) % 1000;
+    cprintf("%d\t%s\t%s\t%d.%d\t", p->pid, state, p->name, sec, milisec);
+#else 
     cprintf("%d %s %s", p->pid, state, p->name);
+#endif
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
