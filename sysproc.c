@@ -6,7 +6,6 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
-
 int
 sys_fork(void)
 {
@@ -41,7 +40,59 @@ sys_getpid(void)
 {
   return proc->pid;
 }
+#ifdef CS333_P2
+int
+sys_getuid(void)
+{
+  return proc->uid;
+}
+int
+sys_getgid(void)
+{
+  return proc->gid;
+}
+int
+sys_getppid(void)
+{
+  if(!proc->parent)
+    return proc->pid;
+  return proc->parent->pid;
+}
 
+int 
+sys_setuid(void)
+{
+  int uid;
+  if(argint(0, &uid) < 0)
+    return -1;
+  if(uid < 0 || uid > 32767)
+    return 0;
+  proc->uid = uid;
+  return uid;
+}
+
+int 
+sys_setgid(void)
+{
+  int gid;
+  if(argint(0, &gid) < 0)// fetch int 
+    return -1;
+  if(gid < 0 || gid > 32767)// check bound return 0
+    return 0;
+  proc->gid = gid;
+  return gid;
+}
+int sys_getprocs(void)
+{
+    int max;
+    struct uproc * table;
+    if(argint(0, &max) < 0)
+        return -1;
+    if(argptr(1, (void*)&table, (sizeof(struct uproc) * max)) < 0)//fetch int and uproc
+        return -1;
+    return getprocs(max, table);
+}
+#endif
 int
 sys_sbrk(void)
 {

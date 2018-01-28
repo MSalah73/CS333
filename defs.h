@@ -1,3 +1,4 @@
+#include "uproc.h"
 struct buf;
 struct context;
 struct file;
@@ -118,7 +119,14 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-
+#ifdef CS333_P2
+uint            getuid(void);
+uint            getgid(void);
+uint            getppid(void);
+int             setuid(uint);
+int             setgid(uint);
+int             getprocs(uint max, struct uproc * table); 
+#endif
 // swtch.S
 void            swtch(struct context**, struct context*);
 

@@ -6,7 +6,6 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -36,13 +35,17 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
-
+  
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
   release(&ptable.lock);
   return 0;
+
+#ifdef CS333_P2
+  p->cpu_ticks_total = p->cpu_ticks_in = 0;
+#endif
 
 found:
   p->state = EMBRYO;
@@ -69,9 +72,11 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
 #ifdef CS333_P1
   p->start_ticks = ticks;
 #endif
+
   return p;
 }
 
@@ -85,6 +90,12 @@ userinit(void)
   
   p = allocproc();
   initproc = p;
+
+#ifdef CS333_P2
+  initproc->parent = initproc;
+  initproc->uid = initproc->gid = UIDGID;
+#endif
+
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
   inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
@@ -147,7 +158,10 @@ fork(void)
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
-
+#ifdef CS333_P2
+  np->uid = proc->uid;
+  np->gid = proc->gid;
+#endif
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
@@ -308,8 +322,12 @@ scheduler(void)
       switchuvm(p);
       p->state = RUNNING;
       swtch(&cpu->scheduler, proc->context);
-      switchkvm();
 
+#ifdef CS333_P2
+      p->cpu_ticks_in = ticks; // Start ticks when the procceser enters 
+#endif
+
+      switchkvm();
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       proc = 0;
@@ -348,14 +366,19 @@ sched(void)
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = cpu->intena;
+
+#ifdef CS333_P2
+  proc->cpu_ticks_total += (ticks - proc->cpu_ticks_in); // Update the total cpu ticks before it switches to the other one
+#endif
+
   swtch(&proc->context, cpu->scheduler);
   cpu->intena = intena;
+
 }
 #else
 void
 sched(void)
 {
-  
 }
 #endif
 
@@ -504,15 +527,21 @@ static char *states[] = {
 void
 procdump(void)
 {
-#ifdef CS333_P1
+#ifdef CS333_P2
+  int i, sec, milisec, cpu_sec, cpu_milisec;
+  char * zeros = "", *cpu_zeros = "";
+#elif CS333_P1
   int i, sec, milisec;
+  char * zeros = "";
 #else
   int i;
 #endif
   struct proc *p;
   char *state;
   uint pc[10];
-#ifdef CS333_P1
+#ifdef CS333_P2
+  cprintf("PID\tName\tUID\tGID\tPPID\tElapsed\t CPU\tState\tSize\t PCs\n");
+#elif CS333_P1
   cprintf("PID\tState\tName\tElapsed\t PCs\n");
 #endif
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -522,11 +551,39 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-#ifdef CS333_P1
+#ifdef CS333_P2
     sec = (ticks - p->start_ticks)/1000;
     milisec = (ticks - p->start_ticks) % 1000;
-    cprintf("%d\t%s\t%s\t%d.%d\t", p->pid, state, p->name, sec, milisec);
-#else 
+    cpu_sec = p->cpu_ticks_total/1000;
+    cpu_milisec = p->cpu_ticks_total % 1000;
+
+    if((milisec < 10 && milisec > 1))
+        zeros = "00";
+    else if(milisec < 100)
+        zeros = "0";
+    else
+        zeros = "";
+    if((cpu_milisec < 10 && cpu_milisec > 1))
+        cpu_zeros = "00";
+    else if(cpu_milisec < 100)
+        cpu_zeros = "0";
+    else
+        cpu_zeros = "";
+
+    cprintf("%d\t%s\t%d\t%d\t%d\t%d.%s%d\t %d.%s%d\t%s\t%d\t", p->pid, p->name, p->uid, p->gid, p->parent->pid, sec, zeros, milisec, cpu_sec, cpu_zeros, cpu_milisec, state, p->sz);
+#elif CS333_P1
+    sec = (ticks - p->start_ticks)/1000;
+    milisec = (ticks - p->start_ticks) % 1000;
+
+    if((milisec < 10 && milisec > 1))
+        zeros = "00";
+    else if(milisec < 100)
+        zeros = "0";
+    else
+        zeros = "";
+
+    cprintf("%d\t%s\t%s\t%d.%s%d\t", p->pid, state, p->name, sec, zeros,  milisec);
+#else
     cprintf("%d %s %s", p->pid, state, p->name);
 #endif
     if(p->state == SLEEPING){
@@ -537,3 +594,30 @@ procdump(void)
     cprintf("\n");
   }
 }
+#ifdef CS333_P2
+int getprocs(uint max, struct uproc * table){
+  struct proc * p;
+  int i;
+
+  for(i = 0, p = ptable.proc; p < &ptable.proc[NPROC] && i < max; p++){
+    if(p->state == UNUSED || p->state == EMBRYO)
+      continue;
+    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+    {
+        table[i].pid = p->pid;
+        table[i].uid = p->uid;
+        table[i].gid = p->gid;
+        table[i].ppid = p->parent->pid;
+        table[i].elapsed_ticks = ticks - p->start_ticks;
+        table[i].CPU_total_ticks = p->cpu_ticks_total;
+        table[i].size = p->sz;
+
+        safestrcpy(table[i].state, states[p->state], STRMAX);
+        safestrcpy(table[i++].name, p->name, STRMAX);
+    }
+    else
+      return -1;
+  }
+  return i;
+}
+#endif

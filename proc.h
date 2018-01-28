@@ -67,7 +67,14 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 #ifdef CS333_P1
-  uint start_ticks;            // I dont know 
+  uint start_ticks;            // Tracks the time of each processor when created 
+#endif
+#ifdef CS333_P2
+  uint uid;                    // User ID
+  uint gid;                    // Group ID
+  uint cpu_ticks_total;        // total elapsed ticks in CPU
+  uint cpu_ticks_in;           // ticks when scheduled
+
 #endif
 };
 
