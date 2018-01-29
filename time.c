@@ -5,7 +5,7 @@ int
 main(int argc, char * argv[])
 {
   ++argv;//ingore the first arg and move throght list of args pass on on main
-  int start = uptime(), end, sec, milisec, pid = fork();//the purpose of calling fork is to invert the list so it looks like the P2 sample
+  int start, end, sec, milisec, pid = fork();//the purpose of calling fork is to invert the list so it looks like the P2 sample
   char * zeros = "";
 
   if(pid < 0)
@@ -22,6 +22,7 @@ main(int argc, char * argv[])
       exit();
     }
 
+  start = uptime(); //do time ps to check correctness
   wait();//to remove possibility of zombies 
   end = uptime();
   sec = (end - start)/1000;
