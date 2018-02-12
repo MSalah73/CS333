@@ -27,7 +27,6 @@ forktest(void)
     if(pid == 0)
       exit();
   }
-  
   if(n == N){
     printf(1, "fork claimed to work N times!\n", N);
     exit();
@@ -39,7 +38,6 @@ forktest(void)
       exit();
     }
   }
-  
   if(wait() != -1){
     printf(1, "wait got too many\n");
     exit();

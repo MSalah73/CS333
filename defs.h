@@ -127,6 +127,12 @@ int             setuid(uint);
 int             setgid(uint);
 int             getprocs(uint max, struct uproc * table); 
 #endif
+#ifdef CS333_P2
+void            control_r(void);
+void            control_f(void);
+void            control_s(void);
+void            control_z(void);
+#endif
 // swtch.S
 void            swtch(struct context**, struct context*);
 

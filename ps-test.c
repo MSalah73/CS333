@@ -29,7 +29,6 @@ forktest(int N)
       exit();
     }
   }
-
   if(wait() != -1){
     printf(2, "wait got too many\n");
     exit();

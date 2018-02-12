@@ -189,14 +189,32 @@ struct {
 void
 consoleintr(int (*getc)(void))
 {
+#ifdef CS333_P3P4
+  int c, doprocdump, dor, dof, dos, doz;
+  doprocdump = dor =  dof = dos = doz = 0;
+#else
   int c, doprocdump = 0;
-
+#endif
   acquire(&cons.lock);
   while((c = getc()) >= 0){
     switch(c){
-    case C('P'):  // Process listing.
-      doprocdump = 1;   // procdump() locks cons.lock indirectly; invoke later
+    case C('P'): // Process listing.
+      doprocdump = 1;  // procdump() locks cons.lock indirectly; invoke later
       break;
+#ifdef CS333_P3P4
+    case C('R'):
+      dor = 1;
+      break;
+    case C('F'):
+      dof = 1;
+      break;
+    case C('S'):
+      dos = 1;
+      break;
+    case C('Z'):
+      doz = 1;
+      break;
+#endif
     case C('U'):  // Kill line.
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
@@ -224,9 +242,24 @@ consoleintr(int (*getc)(void))
     }
   }
   release(&cons.lock);
+#ifdef CS333_P3P4
+  if(doprocdump) {
+    procdump();  // now call procdump() wo. cons.lock held
+  }else if(dor) {
+    control_r();
+  }else if(dof) {
+    control_f();
+  }else if(dos) {
+    control_s();
+  }else if(doz) {
+    control_z();
+  }
+#else
   if(doprocdump) {
     procdump();  // now call procdump() wo. cons.lock held
   }
+#endif
+
 }
 
 int
