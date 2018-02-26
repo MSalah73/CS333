@@ -155,3 +155,15 @@ sys_date(void)
     return 0;
 }
 #endif
+#ifdef CS333_P3P4 //project 4
+int
+sys_setpriority(void)
+{
+  int priority, pid;
+  if(argint(0, &pid) < 0 || argint(1, &priority) < 0)
+    return -1;
+  if((priority < 0 || priority > MAX) || (pid < 0 || pid > NPROC))
+      return -1;
+  return setpriority(pid, priority);
+}
+#endif

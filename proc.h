@@ -78,6 +78,8 @@ struct proc {
 #endif
 #ifdef CS333_P3P4
   struct proc * next;          // Corresponds to a sate
+  int budget;                  // Budget if zero or less - end promte priority +1 
+  uint priority;               // to place back to correct ready list
 #endif
 };
 

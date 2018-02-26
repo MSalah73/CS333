@@ -5,6 +5,9 @@ struct uproc{
     uint uid;
     uint gid;
     uint ppid;
+#ifdef CS333_P3P4
+    uint priority;
+#endif
     uint elapsed_ticks;
     uint CPU_total_ticks;
     char state[STRMAX];

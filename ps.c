@@ -16,7 +16,11 @@ main(void)
       exit();
   }
 
+#ifdef CS333_P3P4
+  printf(1,"PID\tName\tUID\tGID\tPPID\tPrio\tElapsed\t CPU\tState\tSize\n");
+#else
   printf(1,"PID\tName\tUID\tGID\tPPID\tElapsed\t CPU\tState\tSize\n");
+#endif
   
   up = table;
   while(filled--)
@@ -36,7 +40,11 @@ main(void)
     else if(cpu_milisec < 100)
         cpu_zeros = "0";
 
+#ifdef CS333_P3P4
+    printf(2,"%d\t%s\t%d\t%d\t%d\t%d\t%d.%s%d\t %d.%s%d\t%s\t%d\n", up->pid, up->name, up->uid, up->gid, up->ppid,up->priority, elps_sec, elps_zeros, elps_milisec, cpu_sec, cpu_zeros, cpu_milisec, up->state, up->size);
+#else
     printf(2,"%d\t%s\t%d\t%d\t%d\t%d.%s%d\t %d.%s%d\t%s\t%d\n", up->pid, up->name, up->uid, up->gid, up->ppid, elps_sec, elps_zeros, elps_milisec, cpu_sec, cpu_zeros, cpu_milisec, up->state, up->size);
+#endif
     cpu_zeros = elps_zeros = "";
     ++up;
   }

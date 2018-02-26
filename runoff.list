@@ -93,3 +93,6 @@ testuidgid.c
 uproc.h
 ps-test.c
 RRS-test.c
+setpriority.c
+SP-test.c
+PR-test.c

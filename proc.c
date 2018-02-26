@@ -8,7 +8,8 @@
 #include "spinlock.h"
 #ifdef CS333_P3P4
 struct StateLists {
-    struct proc * ready;
+    //struct proc * ready; //Project 3
+    struct proc * ready[MAX+1]; //project 4
     struct proc * free;
     struct proc * sleep;
     struct proc * zombie;
@@ -21,6 +22,7 @@ struct {
   struct proc proc[NPROC];
 #ifdef CS333_P3P4
   struct StateLists pLists;
+  uint PromoteAtTime;
 #endif
 } ptable;
 
@@ -44,6 +46,9 @@ void exit_helper(struct proc ** sList);
 int wait_helper(struct proc ** sList, int * havekids);
 int kill_helper(int pid, struct proc ** sList);
 int remove_helper(struct proc ** sList, struct proc * p);
+int setpriority_helper(struct proc ** sList, int pid, int priority, int * index); //Project 4
+int promotion(struct proc ** sList, int isReady);
+void demotion();
 #endif
 
 void
@@ -120,8 +125,8 @@ found:
 
 #ifdef CS333_P1
   p->start_ticks = ticks;
+  p->budget = BUDGET;
 #endif
-
   return p;
 }
 
@@ -130,10 +135,15 @@ found:
 void
 userinit(void)
 {
+#ifdef CS333_P3P4
+  int i;
+#endif
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
 #ifdef CS333_P3P4
-  ptable.pLists.ready = 0;
+  ptable.PromoteAtTime = ticks;//inital 
+  for(i = 0; i < MAX+1; ++i)
+    ptable.pLists.ready[i] = 0;
   ptable.pLists.sleep = 0;
   ptable.pLists.zombie = 0;
   ptable.pLists.running = 0;
@@ -171,7 +181,8 @@ userinit(void)
 
 #ifdef CS333_P3P4
   acquire(&ptable.lock);
-  removeAndEndInsert(p, &ptable.pLists.embryo, &ptable.pLists.ready, EMBRYO, RUNNABLE);// p - remove - add - check - assign state
+  p->priority = 0;
+  removeAndEndInsert(p, &ptable.pLists.embryo, &ptable.pLists.ready[p->priority], EMBRYO, RUNNABLE);// p - remove - add - check - assign state
   release(&ptable.lock);
 #else 
   p->state = RUNNABLE;
@@ -206,7 +217,6 @@ fork(void)
 {
   int i, pid;
   struct proc *np;
-
   // Allocate process.
   if((np = allocproc()) == 0)// np should be an embryo
     return -1;
@@ -246,7 +256,8 @@ fork(void)
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
 #ifdef CS333_P3P4
-  removeAndEndInsert(np, &ptable.pLists.embryo, &ptable.pLists.ready, EMBRYO, RUNNABLE);//np - remove - add - check - assign state
+  np->priority = 0;
+  removeAndEndInsert(np, &ptable.pLists.embryo, &ptable.pLists.ready[np->priority], EMBRYO, RUNNABLE);//np - remove - add - check - assign state
 #else
   np->state = RUNNABLE;
 #endif
@@ -263,7 +274,6 @@ exit(void)
 {
   struct proc *p;
   int fd;
-
   if(proc == initproc)
     panic("init exiting");
 
@@ -303,8 +313,7 @@ exit(void)
 void
 exit(void)
 {
-  int fd;
-
+  int fd, i;
   if(proc == initproc)
     panic("init exiting");
 
@@ -328,7 +337,8 @@ exit(void)
 
   // Pass abandoned children to init. //
   //Free donst not have parents
-  exit_helper(&ptable.pLists.ready);
+  for(i = 0; i < MAX+1; ++i)
+    exit_helper(&ptable.pLists.ready[i]);
   exit_helper(&ptable.pLists.running);
   exit_helper(&ptable.pLists.zombie);
   exit_helper(&ptable.pLists.embryo);//yes, embry have parents
@@ -403,15 +413,15 @@ wait(void)
 int
 wait(void)
 {
-  int havekids, pid;
-
+  int havekids, pid, i;
   acquire(&ptable.lock);
   for(;;){
     havekids = 0;
     // Scan through table looking for zombie children.
     pid = wait_helper(&ptable.pLists.zombie, &havekids);
     if(pid) return pid;//only with zombie list
-    wait_helper(&ptable.pLists.ready, &havekids);
+    for(i = 0; i < MAX+1; ++i)
+      wait_helper(&ptable.pLists.ready[i], &havekids);
     wait_helper(&ptable.pLists.running, &havekids);
     wait_helper(&ptable.pLists.sleep, &havekids);
     wait_helper(&ptable.pLists.embryo, &havekids);
@@ -516,6 +526,7 @@ scheduler(void)
 {
   struct proc *p;
   int idle;  // for checking if processor is idle
+  int i;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -524,29 +535,40 @@ scheduler(void)
     idle = 1;  // assume idle unless we schedule a process
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    if((p = ptable.pLists.ready))//rnnable loop and o running -- START
-    {
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      idle = 0;  // not idle this timeslice
-      proc = p;
-      switchuvm(p);
 
-      //cprintf("schedular\n");
-      removeAndHeadInsert(p, &ptable.pLists.ready, &ptable.pLists.running, RUNNABLE, RUNNING);//proc - remove - add - check - assign state
-      //cprintf("schedualr done\n");
-      swtch(&cpu->scheduler, proc->context);
+    if(ticks >= ptable.PromoteAtTime)
+    {
+      for(i = 1; i < MAX+1; ++i)
+        promotion(&ptable.pLists.ready[i], 1); // 1 for ready 
+      promotion(&ptable.pLists.running, 0); // 0 for sleep and running
+      promotion(&ptable.pLists.sleep, 0); 
+      ptable.PromoteAtTime = ticks + TICKS_TO_PROMOTE;
+    }
+    for(i = 0; i < MAX+1; ++i)
+      if((p = ptable.pLists.ready[i]))//rnnable loop and o running -- START
+      {
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        idle = 0;  // not idle this timeslice
+        proc = p;
+        switchuvm(p);
+
+        //cprintf("schedular\n");
+        removeAndHeadInsert(p, &ptable.pLists.ready[i], &ptable.pLists.running, RUNNABLE, RUNNING);//proc - remove - add - check - assign state
+        //cprintf("schedualr done\n");
+        swtch(&cpu->scheduler, proc->context);
 
 #ifdef CS333_P2
-      p->cpu_ticks_in = ticks; // Start ticks when the procceser enters 
+        p->cpu_ticks_in = ticks; // Start ticks when the procceser enters 
 #endif
 
-      switchkvm();
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
-    }
+        switchkvm();
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        proc = 0;
+        i = MAX+1;
+      }
     release(&ptable.lock);
     // if idle, wait for next interrupt
     if (idle) 
@@ -557,7 +579,7 @@ scheduler(void)
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.
-#ifdef CS333_P3P4
+#ifndef CS333_P3P4
 void
 sched(void)
 {
@@ -579,13 +601,29 @@ sched(void)
 
   swtch(&proc->context, cpu->scheduler);
   cpu->intena = intena;
-
 }
 #else
 void
 sched(void)
 {
-  //cprintf("sched\n");
+  int intena;
+
+  if(!holding(&ptable.lock))
+    panic("sched ptable.lock");
+  if(cpu->ncli != 1)
+    panic("sched locks");
+  if(proc->state == RUNNING)
+    panic("sched running");
+  if(readeflags()&FL_IF)
+    panic("sched interruptible");
+  intena = cpu->intena;
+
+#ifdef CS333_P2
+  proc->cpu_ticks_total += (ticks - proc->cpu_ticks_in); // Update the total cpu ticks before it switches to the other one
+#endif
+
+  swtch(&proc->context, cpu->scheduler);
+  cpu->intena = intena;
 }
 #endif
 
@@ -596,7 +634,8 @@ yield(void)
   acquire(&ptable.lock);  //DOC: yieldlock
 #ifdef CS333_P3P4
   //cprintf("yield\n");
-  removeAndEndInsert(proc, &ptable.pLists.running, &ptable.pLists.ready, RUNNING, RUNNABLE);//proc - remove - add - check - assign state
+  demotion();// Project 4 - update budget and priority 
+  removeAndEndInsert(proc, &ptable.pLists.running, &ptable.pLists.ready[proc->priority], RUNNING, RUNNABLE);//proc - remove - add - check - assign state
   //cprintf("yield done\n");
 #else
   proc->state = RUNNABLE;
@@ -655,6 +694,7 @@ sleep(void *chan, struct spinlock *lk)
 #ifdef CS333_P3P4
   //cprintf("sleep\n");
   removeAndHeadInsert(proc, &ptable.pLists.running, &ptable.pLists.sleep, RUNNING, SLEEPING);//proc - remove - add - check - assign state
+  demotion();// Project 4 - budget update
   //cprintf("sleep done\n");
 #else
   proc->state = SLEEPING;
@@ -693,8 +733,13 @@ wakeup1(void *chan)
   while(p)
   {
     if(p->chan == chan && p->state == SLEEPING)
-      removeAndEndInsert(p, &ptable.pLists.sleep, &ptable.pLists.ready, SLEEPING, RUNNABLE);//proc - remove - add - check - assign state
-    p = p->next;
+    {
+      struct proc * hold = p->next;//11. (-1) point fixed 
+      removeAndEndInsert(p, &ptable.pLists.sleep, &ptable.pLists.ready[p->priority], SLEEPING, RUNNABLE);//proc - remove - add - check - assign state
+      p = hold;
+    }
+    else
+      p = p->next;
   }
 }
 #endif
@@ -735,8 +780,12 @@ kill(int pid)
 int
 kill(int pid)
 {
+  int i, isFound = 0;
   acquire(&ptable.lock);
-  if(kill_helper(pid, &ptable.pLists.ready))
+  for(i = 0; i < MAX+1 && !isFound; ++i)
+    if(kill_helper(pid, &ptable.pLists.ready[i]))
+      ++isFound;
+  if(isFound)
       return 0;
   else if(kill_helper(pid, &ptable.pLists.running))
       return 0;
@@ -758,7 +807,10 @@ kill_helper(int pid, struct proc ** sList)
   if(p->pid == pid){
     p->killed = 1;
     if(p->state == SLEEPING)
-      removeAndEndInsert(p, &ptable.pLists.sleep, &ptable.pLists.ready, SLEEPING, RUNNABLE);//proc - remove - add - check - assign state
+    {
+      p->priority = 0;
+      removeAndEndInsert(p, &ptable.pLists.sleep, &ptable.pLists.ready[p->priority], SLEEPING, RUNNABLE);//proc - remove - add - check - assign state
+    }
     release(&ptable.lock);
     return 1;
   }
@@ -794,7 +846,9 @@ procdump(void)
   struct proc *p;
   char *state;
   uint pc[10];
-#ifdef CS333_P2
+#ifdef CS333_P3P4
+  cprintf("PID\tName\tUID\tGID\tPPID\tPrio\tElapsed\t CPU\tState\tSize\t PCs\n");
+#elif CS333_P2
   cprintf("PID\tName\tUID\tGID\tPPID\tElapsed\t CPU\tState\tSize\t PCs\n");
 #elif CS333_P1
   cprintf("PID\tState\tName\tElapsed\t PCs\n");
@@ -824,8 +878,12 @@ procdump(void)
         cpu_zeros = "0";
     else
         cpu_zeros = "";
-
+#ifdef CS333_P3P4
+    cprintf("%d\t%s\t%d\t%d\t%d\t%d\t%d.%s%d\t %d.%s%d\t%s\t%d\t", p->pid, p->name, p->uid, p->gid, p->parent->pid, p->priority, sec, zeros, milisec, cpu_sec, cpu_zeros, cpu_milisec, state, p->sz);
+#else
     cprintf("%d\t%s\t%d\t%d\t%d\t%d.%s%d\t %d.%s%d\t%s\t%d\t", p->pid, p->name, p->uid, p->gid, p->parent->pid, sec, zeros, milisec, cpu_sec, cpu_zeros, cpu_milisec, state, p->sz);
+#endif
+
 #elif CS333_P1
     sec = (ticks - p->start_ticks)/1000;
     milisec = (ticks - p->start_ticks) % 1000;
@@ -863,6 +921,9 @@ int getprocs(uint max, struct uproc * table){
         table[i].uid = p->uid;
         table[i].gid = p->gid;
         table[i].ppid = p->parent->pid;
+#ifdef CS333_P3P4
+        table[i].priority = p->priority;
+#endif
         table[i].elapsed_ticks = ticks - p->start_ticks;
         table[i].CPU_total_ticks = p->cpu_ticks_total;
         table[i].size = p->sz;
@@ -967,18 +1028,23 @@ removeAndEndInsert(struct proc * p, struct proc ** to_remove, struct proc ** to_
 void 
 control_r(void)
 {
-  struct proc * p = ptable.pLists.ready;
+  int i;
   cprintf("Ready List Processes:\n");
-  if(!p)
-    cprintf("Empty\n");
-
-  while(p)
+  for(i = 0; i < MAX+1; ++i)
   {
-    if(p->next)
-      cprintf("%d -> ", p->pid);
-    else
-      cprintf("%d\n", p->pid);
-    p = p->next;
+    struct proc * p = ptable.pLists.ready[i];
+    cprintf("%d: ", i);
+    if(!p)
+      cprintf("Empty\n");
+
+    while(p)
+    {
+      if(p->next)
+        cprintf("(%d, %d) -> ", p->pid, p->budget);
+      else
+        cprintf("(%d, %d)\n", p->pid, p->budget);
+      p = p->next;
+    }
   }
 }
 void 
@@ -1022,6 +1088,67 @@ control_z(void)
     else
       cprintf("(%d, %d)\n", p->pid, p->parent->pid);;
     p = p->next;
+  }
+}
+//***************Project 4****************//
+int 
+setpriority(int pid, int priority)
+{
+  int i, isSet = 1;
+  acquire(&ptable.lock);
+  for(i = 0; i < MAX+1 && isSet; ++i)
+    isSet = setpriority_helper(&ptable.pLists.ready[i], pid, priority, &i);
+  if(isSet && (isSet = setpriority_helper(&ptable.pLists.sleep, pid, priority, 0)))
+    isSet = setpriority_helper(&ptable.pLists.running, pid, priority, 0);
+  release(&ptable.lock);
+  return isSet;
+}
+int 
+setpriority_helper(struct proc ** sList, int pid, int priority, int * index)
+{
+  struct proc * phead = *sList;
+  if(!phead)
+    return 1;
+  if(phead->pid == pid)
+  {
+    if(index)//this is only for the ready state, otherwise its null.
+    {
+      checker(removeFromStateList(&ptable.pLists.ready[*index], phead));
+      phead->budget = BUDGET;
+      phead->priority = priority;
+      checker(addToStateListEnd(&ptable.pLists.ready[priority], phead));
+    }
+    else
+    {
+      phead->budget = BUDGET;
+      phead->priority = priority;
+    }
+    return 0;
+  }
+  return setpriority_helper(&phead->next, pid, priority, index);
+}
+int
+promotion(struct proc ** sList, int isReady)
+{
+  struct proc * phead = *sList;
+  if(!phead || !phead->priority)
+    return 1;
+  --phead->priority;
+  if(isReady)
+  {
+    removeAndEndInsert(phead, sList, &ptable.pLists.ready[phead->priority], RUNNABLE, RUNNABLE);//proc - remove - add - check - assign state
+  }
+  return promotion(&phead->next, isReady);
+}
+void
+demotion()
+{
+  proc->budget = proc->budget - (ticks - proc->cpu_ticks_in);
+  if(proc->budget <= 0)
+  {
+    if(proc->priority < MAX)
+      ++proc->priority;
+    proc->budget = BUDGET;
   }
 }
 #endif
