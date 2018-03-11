@@ -113,6 +113,11 @@ extern int sys_getprocs(void);
 #ifdef CS333_P3P4
 extern int sys_setpriority(void);
 #endif 
+#ifdef CS333_P5
+extern int sys_chown(void);
+extern int sys_chgrp(void);
+extern int sys_chmod(void);
+#endif 
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -151,6 +156,11 @@ static int (*syscalls[])(void) = {
 #ifdef CS333_P3P4
 [SYS_setpriority]  sys_setpriority,
 #endif
+#ifdef CS333_P5
+[SYS_chown]  sys_chown,
+[SYS_chgrp]  sys_chgrp,
+[SYS_chmod]  sys_chmod,
+#endif
 };
 // put data structure for printing out system call invocation information here
 
@@ -183,7 +193,7 @@ static char *syscallnames[] = {
 [SYS_date]     "date",
 #endif
 #ifdef CS333_P2
-[SYS_etuid]    "getuid",
+[SYS_getuid]   "getuid",
 [SYS_getgid]   "getgid",
 [SYS_getppid]  "getppid",
 [SYS_setuid]   "setuid",
@@ -193,13 +203,17 @@ static char *syscallnames[] = {
 #ifdef CS333_P3P4
 [SYS_setpriority]  "setpriority",
 #endif
+#ifdef CS333_P5
+[SYS_chown]  "chown",
+[SYS_chgrp]  "chgrp",
+[SYS_chmod]  "chmod",
+#endif
 };
 #endif
 void
 syscall(void)
 {
   int num;
-
   num = proc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
 #ifdef PRINT_SYSCALLS

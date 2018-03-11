@@ -66,9 +66,9 @@ sys_setuid(void)
   if(argint(0, &uid) < 0)
     return -1;
   if(uid < 0 || uid > 32767)
-    return 0;
+    return -1;
   proc->uid = uid;
-  return uid;
+  return 0;
 }
 
 int 
@@ -77,10 +77,10 @@ sys_setgid(void)
   int gid;
   if(argint(0, &gid) < 0)// fetch int 
     return -1;
-  if(gid < 0 || gid > 32767)// check bound return 0
-    return 0;
+  if(gid < 0 || gid > 32767)// check bound return 1
+    return -1;
   proc->gid = gid;
-  return gid;
+  return 0;
 }
 int sys_getprocs(void)
 {

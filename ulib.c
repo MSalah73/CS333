@@ -97,7 +97,7 @@ atoi(const char *s)
 }
 
 int
-atoo(const char *s)
+atoo(const char *s) // for chmod to change strings to decimal int
 {
   int n, sign;
 
@@ -110,8 +110,6 @@ atoo(const char *s)
     n = n*8 + *s++ - '0';
   return sign*n;
 }
-
-
 void*
 memmove(void *vdst, void *vsrc, int n)
 {

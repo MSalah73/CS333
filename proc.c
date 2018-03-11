@@ -125,6 +125,8 @@ found:
 
 #ifdef CS333_P1
   p->start_ticks = ticks;
+#endif
+#ifdef CS333_P4
   p->budget = BUDGET;
 #endif
   return p;

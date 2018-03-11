@@ -440,3 +440,39 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+#ifdef CS333_P5
+int
+sys_chown(void)
+{
+  char * pathname;
+  int owner;
+  if(argstr(0, &pathname) < 0 || argint(1, &owner) < 0)
+    return -1;
+  if(owner < 0 || owner > 32767)
+    return -1;
+  return chown(pathname, owner);
+}
+int
+sys_chgrp(void)
+{
+  char * pathname;
+  int group;
+  if(argstr(0, &pathname) < 0 || argint(1, &group) < 0)
+    return -1;
+  if(group < 0 || group > 32767)
+    return -1;
+  return chgrp(pathname, group);
+}
+int
+sys_chmod(void)
+{
+  char * pathname;
+  int mode;
+  if(argstr(0, &pathname) < 0 || argint(1, &mode) < 0)
+    return -1;
+  //octal 1777 = 1023 decimal | 1 * 8^3 + 7 * 8^2 + 7 * 8^1 + 7 = 1023
+  if(mode < 0 || mode > 1023)
+    return -1;
+  return chmod(pathname, mode);
+}
+#endif

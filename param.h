@@ -16,3 +16,4 @@
 #define MAX                 6
 #define TICKS_TO_PROMOTE    4000
 #define BUDGET              2000
+#define MODE                0755 // defualt permission --- rwx r-x r-x -- the ZERO auto covert to decimal!

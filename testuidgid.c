@@ -22,9 +22,9 @@ testuidgid(void)
       testsample = TESTCASES[i];
       printf(2, "Setting_UID_is:_%d\n", testsample);
       to_check = setuid(testsample);
-      if(to_check == testsample) // for values in bounds
+      if(!to_check) // for values in bounds
         uid = getuid();
-      else if(!to_check)
+      else if(to_check)
         printf(2, "Unable To Set: %d To UID - Out of bounds\n", testsample);// zero for values out of bounds
       else
         printf(2, "Unable To Set: %d To UID - Feching Error\n", testsample); //to_check value is -1 - argint failed
@@ -36,9 +36,9 @@ testuidgid(void)
       testsample = TESTCASES[i];
       printf(2, "Setting_GID_is:_%d\n", testsample);
       to_check = setgid(testsample);
-      if(to_check == testsample)
+      if(!to_check)
         gid = getgid();
-      else if(!to_check)
+      else if(to_check)
         printf(2, "Unable To Set: %d To GID - Out of bounds\n", testsample);
       else
         printf(2, "Unable To Set: %d To UID - Feching Error\n", testsample);

@@ -39,6 +39,11 @@ int getprocs(uint max, struct uproc * table);
 #ifdef CS333_P3P4
 int setpriority(int pid, int priority);
 #endif
+#ifdef CS333_P5
+int chown(char *pathname, int owner);
+int chgrp(char *pathname, int group);
+int chmod(char *pathname, int mode);
+#endif
 
 // ulib.c
 int stat(char*, struct stat*);
@@ -53,3 +58,6 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+#ifdef CS333_P5
+int atoo(const char *);
+#endif

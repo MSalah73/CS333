@@ -6,13 +6,23 @@
 #include "defs.h"
 #include "x86.h"
 #include "elf.h"
+#ifdef CS333_P5
+#include "stat.h"
+#endif
 
 int
 exec(char *path, char **argv)
 {
   char *s, *last;
+#ifdef CS333_P5
+  int i, off, isExecutable = 0; // zero - no permission to execute
+#else
   int i, off;
+#endif
   uint argc, sz, sp, ustack[3+MAXARG+1];
+#ifdef CS333_P5
+  struct stat permission;
+#endif
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
@@ -25,7 +35,13 @@ exec(char *path, char **argv)
   }
   ilock(ip);
   pgdir = 0;
-
+#ifdef CS333_P5 // check for execute premission before profroming execute
+  stati(ip, &permission);//ip incompelete struct ? - tutor suggestion
+  if(permission.uid == proc->uid && (isExecutable = permission.mode.flags.u_x));
+  else if(permission.gid == proc->gid && (isExecutable = permission.mode.flags.g_x));
+  else if(!(isExecutable = permission.mode.flags.o_x))
+    goto bad; //bad programming practice ??
+#endif 
   // Check ELF header
   if(readi(ip, (char*)&elf, 0, sizeof(elf)) < sizeof(elf))
     goto bad;
@@ -87,6 +103,10 @@ exec(char *path, char **argv)
   safestrcpy(proc->name, last, sizeof(proc->name));
 
   // Commit to the user image.
+#ifdef CS333_P5
+  if(permission.mode.flags.setuid)
+    proc->uid = permission.uid;
+#endif
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;

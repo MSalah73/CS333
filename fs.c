@@ -185,6 +185,10 @@ ialloc(uint dev, short type)
     dip = (struct dinode*)bp->data + inum%IPB;
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
+#ifdef CS333_P5
+      dip->uid = dip->gid = UIDGID;
+      dip->mode.asInt = MODE;
+#endif
       dip->type = type;
       log_write(bp);   // mark it allocated on the disk
       brelse(bp);
@@ -204,6 +208,11 @@ iupdate(struct inode *ip)
 
   bp = bread(ip->dev, IBLOCK(ip->inum, sb));
   dip = (struct dinode*)bp->data + ip->inum%IPB;
+#ifdef CS333_P5
+  dip->uid = ip->uid;
+  dip->gid = ip->gid;
+  dip->mode.asInt = ip->mode.asInt;
+#endif
   dip->type = ip->type;
   dip->major = ip->major;
   dip->minor = ip->minor;
@@ -281,6 +290,11 @@ ilock(struct inode *ip)
   if(!(ip->flags & I_VALID)){
     bp = bread(ip->dev, IBLOCK(ip->inum, sb));
     dip = (struct dinode*)bp->data + ip->inum%IPB;
+#ifdef CS333_P5
+    ip->uid = dip->uid;
+    ip->gid = dip->gid;
+    ip->mode.asInt = dip->mode.asInt;
+#endif
     ip->type = dip->type;
     ip->major = dip->major;
     ip->minor = dip->minor;
@@ -422,6 +436,11 @@ itrunc(struct inode *ip)
 void
 stati(struct inode *ip, struct stat *st)
 {
+#ifdef CS333_P5
+  st->uid = ip->uid;
+  st->gid = ip->gid;
+  st->mode.asInt = ip->mode.asInt;
+#endif
   st->dev = ip->dev;
   st->ino = ip->inum;
   st->type = ip->type;
@@ -649,3 +668,57 @@ nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
 }
+#ifdef CS333_P5
+int
+chown(char * pathname, int owner)
+{
+  struct inode * ip;
+  begin_op(); 
+  if((ip = namei(pathname)) == 0)
+  {
+    end_op();
+    return -1;
+  }
+  ilock(ip); 
+  ip->uid = owner;
+  iupdate(ip);
+  iunlock(ip);
+  end_op();
+  return 0;
+}
+int
+chgrp(char * pathname, int group)
+{
+  struct inode * ip;
+  begin_op(); 
+  if((ip = namei(pathname)) == 0)
+  {
+    end_op();
+    return -1;
+  }
+  ilock(ip); 
+  ip->gid = group;
+  iupdate(ip);
+  iunlock(ip);
+  end_op();
+  return 0;
+}
+int
+chmod(char * pathname, int mode)
+{
+  struct inode * ip;
+  begin_op(); 
+  if((ip = namei(pathname)) == 0) 
+  {
+    end_op();
+    return -1;
+  }
+  ilock(ip); 
+  //store mode value to asInt - asInt(0007) = flags on/off(other(rwx - 111 = 4+2+1)) 
+  ip->mode.asInt = mode; 
+  iupdate(ip);
+  iunlock(ip);
+  end_op();
+  return 0;
+}
+#endif

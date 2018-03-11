@@ -1,4 +1,3 @@
-#ifdef CS333_P5
 // this is an ugly series of if statements but it works
 void
 print_mode(struct stat* st)
@@ -59,4 +58,3 @@ print_mode(struct stat* st)
 
   return;
 }
-#endif

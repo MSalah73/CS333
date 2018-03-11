@@ -227,6 +227,10 @@ ialloc(ushort type)
   struct dinode din;
 
   bzero(&din, sizeof(din));
+#ifdef CS333_P5
+  din.uid = din.gid = UIDGID;
+  din.mode.asInt = MODE; //mode is already octal 
+#endif
   din.type = xshort(type);
   din.nlink = xshort(1);
   din.size = xint(0);

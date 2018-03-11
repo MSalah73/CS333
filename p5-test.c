@@ -89,6 +89,9 @@ doUidTest (char **cmd)
   startuid = uid = getuid();
   testuid = ++uid;
   rc = setuid(testuid);
+
+  //printf(2, "%d\n",rc);
+
   if (rc) {
     printf(2, "setuid system call reports an error.\n");
     return NOPASS;
