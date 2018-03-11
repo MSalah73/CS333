@@ -9,7 +9,8 @@ main(int argc, char * argv[])
     printf(1, "Invalid use of chmod - usage: chown # Path\n");
     exit();
   }
-  chown(argv[2], atoi(argv[1]));
+  if(chown(argv[2], atoi(argv[1])))
+    printf(1 ,"chmod exec error - # is out of bounds or pathname does not exist\n");
   exit();
 }
 #else 

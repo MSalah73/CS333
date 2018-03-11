@@ -9,7 +9,8 @@ main(int argc, char * argv[])
     printf(1, "Invalid use of chgrp - usage: chgrp # Path\n");
     exit();
   }
-  chgrp(argv[2], atoi(argv[1])); 
+  if(chgrp(argv[2], atoi(argv[1])))
+    printf(1 ,"chgrp exec error - # is out of bounds or pathname does not exist\n");
   exit();
 }
 #else 

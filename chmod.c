@@ -11,7 +11,8 @@ main(int argc, char * argv[])
     exit();
   }
   //atoo convert octal to decimal -  only catch number characters - no need to check
-  chmod(argv[2], atoo(argv[1])); 
+  if(chmod(argv[2], atoo(argv[1])))
+    printf(1 ,"chmod exec error - # is out of bounds or pathname does not exist\n");
   exit();
 }
 #else
