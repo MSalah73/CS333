@@ -11,8 +11,7 @@ I have added System calls, User commands such as time process execution and disp
 # Running My Modifications
 ------------
 
-Look at **BUILDING AND RUNNING XV6** for running XV6. To run my medication please edit the Makefile to Project #. 
-The numbers are from 0 to 5. 0 is the original code and 5 is my latest modification combined with 0,1,2,3,4.
+Look at **BUILDING AND RUNNING XV6** for running XV6. To run my medication please edit the Makefile to Project #. The numbers are from 0 to 5. 0 is the original code and 5 is my latest modification combined with 0,1,2,3,4.
 
 # License
 -------
