@@ -2,7 +2,7 @@
 ## *By Mohammed (Zack) Salah*
 
 # Key modifications
-I have added System calls, User commands such as time process execution and display process state. I have Modified and implement regular Process scheduling In P3 and improved upon it in P4 by implementing MLFQ scheduler. I have implemented process allocation and deallocation and transition semantics between process state transition. I also have implemented protection in XV6.
+I have added System calls, User commands such as time process execution and display process state. I have Modified and implement regular Process scheduling In P3 and improved upon it in P4 by implementing MLFQ scheduler. I have implemented process allocation and deallocation and transition semantics between process state transition. I also have implementeda file system protection in XV6.
 
 # Modifications Placement
 
