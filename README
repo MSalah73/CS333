@@ -2,16 +2,16 @@
 ## *By Mohammed (Zack) Salah*
 
 # Key modifications
-I have added System calls, User commands such as time process execution and display process state. I have Modified and implement regular Process scheduling In P3 and improved upon it in P4 by implementing MLFQ scheduler. I have implemented process allocation and deallocation and transition semantics between process state transition. I also have implementeda file system protection in XV6.
+I have added system calls, user commands such as time process execution and display process state. I have modified and implemented regular process scheduling in P3 and improved upon it in P4 by implementing the MLFQ scheduler. I have implemented process allocation, deallocation, and transition semantics between process state transition. I also have implemented file system protection in XV6.
 
 # Modifications Placement
 
-* **Placement in XV6 Source Code**: *All modification are place under condition completion flags*
+* **Placement in XV6 Source Code**: *All modifications are placed under condition completion flags*
 
 # Running My Modifications
 ------------
 
-Look at **BUILDING AND RUNNING XV6** for running XV6. To run my medication please edit the Makefile to Project #. The numbers are from 0 to 5. 0 is the original code and 5 is my latest modification combined with 0,1,2,3,4.
+Look at **BUILDING AND RUNNING XV6** for running XV6. To run my modifications, please edit the Makefile to Project #. The numbers are from 0 to 5. 0 is the original code and 5 is my latest modification combined with 0,1,2,3,4.
 
 # License
 -------
