@@ -1,5 +1,5 @@
 # Modification to MIT's XV6 Operating System
-## *By Mohammed (Zack) Salah*
+## *By Mohammed Salah*
 
 # Key modifications
 I have added system calls, user commands such as time process execution and display process state. I have modified and implemented regular process scheduling in P3 and improved upon it in P4 by implementing the MLFQ scheduler. I have implemented process allocation, deallocation, and transition semantics between process state transition. I also have implemented file system protection in XV6.
@@ -15,7 +15,7 @@ Look at **BUILDING AND RUNNING XV6** for running XV6. To run my modifications, p
 
 # License
 -------
-Copyright (c) 2017 **Mohammed (Zack) Salah**
+Copyright (c) 2017 **Mohammed Salah**
 
 ## Original README
 
